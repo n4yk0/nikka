@@ -297,7 +297,7 @@ mod tests {
     #[test]
     fn grid_shape_and_palette() {
         let g = Grid::parse(GRID);
-        assert!(!g.rows.is_empty() && g.rows.len() % 2 == 0);
+        assert!(!g.rows.is_empty() && g.rows.len().is_multiple_of(2));
         for (i, row) in g.rows.iter().enumerate() {
             assert_eq!(row.len(), g.width(), "row {i}");
             assert!(row.iter().all(|&p| p == PIXEL_EMPTY || palette(p).is_some()), "row {i}");

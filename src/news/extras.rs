@@ -159,7 +159,7 @@ pub fn parse_kev(data: &[u8], limit: usize) -> Result<Vec<Kev>, serde_json::Erro
             })
         })
         .collect();
-    entries.sort_by(|a, b| b.date_added.cmp(&a.date_added));
+    entries.sort_by_key(|e| std::cmp::Reverse(e.date_added));
     if limit > 0 {
         entries.truncate(limit);
     }
