@@ -108,13 +108,35 @@ fn pixelate(img: &Image, width: usize) -> Vec<String> {
     let mut height = ((bx.max_y - bx.min_y) as f64 / scale).round() as usize;
     height += height % 2;
     let side = scale.ceil() as usize;
-    (0..height)
+    let grid: Vec<String> = (0..height)
         .map(|gy| {
             (0..width)
                 .map(|gx| {
                     let x0 = bx.min_x + (gx as f64 * scale) as usize;
                     let y0 = bx.min_y + (gy as f64 * scale) as usize;
                     classify(img, Rect { min_x: x0, min_y: y0, max_x: x0 + side, max_y: y0 + side })
+                })
+                .collect()
+        })
+        .collect();
+    close_outline(&grid)
+}
+
+/// Turns empty cells that touch a coloured cell into outline, so no colour meets the background.
+fn close_outline(grid: &[String]) -> Vec<String> {
+    let cells: Vec<Vec<char>> = grid.iter().map(|row| row.chars().collect()).collect();
+    let at = |x: isize, y: isize| {
+        let row = usize::try_from(y).ok().and_then(|y| cells.get(y));
+        row.and_then(|row| usize::try_from(x).ok().and_then(|x| row.get(x))).copied().unwrap_or(CELL_TRANSPARENT)
+    };
+    let coloured = |c: char| c != CELL_TRANSPARENT && c != CELL_OUTLINE;
+    (0..cells.len() as isize)
+        .map(|y| {
+            (0..cells[y as usize].len() as isize)
+                .map(|x| {
+                    let touches_colour =
+                        [(1, 0), (-1, 0), (0, 1), (0, -1)].iter().any(|(dx, dy)| coloured(at(x + dx, y + dy)));
+                    if at(x, y) == CELL_TRANSPARENT && touches_colour { CELL_OUTLINE } else { at(x, y) }
                 })
                 .collect()
         })
@@ -199,6 +221,12 @@ mod tests {
     #[test]
     fn pixelate_classifies_the_palette() {
         assert_eq!(pixelate(&synthetic(), 6), ["KKKKKK", "KWWWWK", "KWWWWK", "KBBBBK", "KLLLLK", "KKKKKK"]);
+    }
+
+    #[test]
+    fn close_outline_outlines_empty_cells_next_to_colour() {
+        let grid = ["...".to_string(), ".W.".to_string(), "KK.".to_string()];
+        assert_eq!(close_outline(&grid), [".K.", "KWK", "KK."]);
     }
 
     #[test]
